@@ -137,9 +137,132 @@ end
         (value >= 5) && (value <= 10) && (value % 2 == 0)
       end
     end
-
-
-
   end
+  describe 'predicate matchers' do
+    it 'will match be_* to custom methods ending in ?' do
+      #can use these when methods ends in "?", require no arguments,
+      #and  return true/false with built-in methods
+      expect([]).to be_empty    # [].empty?
+      expect(1).to be_integer   # 1.integer?
+      expect(0).to be_zero      # 0.zero?
+      expect(1).to be_nonzero   # 1.nonzero?
+      expect(1).to be_odd       # 1.odd?
+      expect(2).to be_even      # 2.even?
+
+      #with custom methods
+      class Product
+        def visible?
+          true
+        end
+      end
+      product = Product.new
+
+      expect(product).to be_visible  # same as product.visible?
+      expect(product.visible?).to be true  #exactly the same as this
+    end
+    it 'will match nave_* to custom methods like has_*?' do
+      #can use these when methods start with "has_", ends in "?",
+      #and  return true/false with built-in methods, can have arguments,
+      #but not requitred
+      
+      #with built-in methods
+      hash = {:a => 1, :b => 2}
+      expect(hash).to have_key(:a)  #hash.has_key?
+      expect(hash).to have_value(2) #hash.has_value?
+      
+      #with custom methods
+      class Customer
+        def has_pending_order?
+          true
+        end
+      end
+      customer = Customer.new
+
+      expect(customer).to have_pending_order
+      expect(customer.has_pending_order?).to be true
+    end
+  end
+  describe 'observation matchers' do
+    it 'will match when events change objects attributes' do
+      #call the test before the block then again after the block
+      array = []
+      expect { array << 1 }.to change(array, :empty?).from(true).to(false)
+
+      class WebsiteHits
+        attr_accessor :count
+        def initialize
+          @count = 0
+        end
+        def increment
+          @count += 1
+        end
+      end
+      hits = WebsiteHits.new
+      expect { hits.increment }.to change(hits, :count).from(0).to(1)
+    end
+    it 'will match when events change any values' do
+      #call the test before the block then again after the block
+      
+      #notice, that {} after "change" can be used on simple variables
+      x = 10
+      expect { x += 1 }.to change {x}.from(10).to(11)
+      expect { x += 1 }.to change {x}.by(1)
+      expect { x += 1 }.to change {x}.by_at_least(1)
+      expect { x += 1 }.to change {x}.by_at_most(1)
+
+      #notice, that {} after "change" could contain any block of code
+      z = 11
+      expect { z += 1 }.to change { z % 3 }.from(2).to(0)
+    end
+    it 'will match when errors are rised' do
+      #observes any errors rised by the block
+      expect { raise StandardError }.to raise_error
+      expect { raise StandardError }.to raise_exception
+
+      expect { 1 / 0 }.to raise_error(ZeroDivisionError)
+      expect { 1 / 0 }.to raise_error.with_message("divided by 0")
+      expect { 1 / 0 }.to raise_error.with_message(/divided/)
+      
+      #note that negative form does not accept arguments
+      expect { 1 / 1 }.not_to raise_error
+    end
+    it 'will match when output is generated' do
+      #observes output sent to $stdout or $stderr
+      expect { print('hello') }.to output.to_stdout
+      expect { print('hello') }.to output('hello').to_stdout
+      expect { print('hello') }.to output(/ll/).to_stdout
+      expect { warn('problem') }.to output(/problem/).to_stderr
+    end
+  end
+  describe 'compound expectations' do
+    it 'will match using: and, or, &, |' do
+      expect([1,2,3,4]).to start_with(1).and end_with(4)
+      expect([1,2,3,4]).to start_with(1) & include(2)
+      expect(10 * 10).to be_odd.or be > 50
+
+      array = ['hello', 'goodby'].shuffle
+      expect(array.first).to eq("hello") | eq("goodby")
+    end
+  end
+  describe 'composing matches' do
+    #some matchers accept other matchers as arguments
+    it 'will match all collection of elements using a matcher' do
+      array = [1,2,3]
+      expect(array).to all( be < 5 )
+    end
+    it 'will match by sending matchers as arguments to matchers' do
+      string = "hello"
+      expect { string = "goodby" }.to change { string }.from( match(/ll/)).to( match(/oo/) )
+    end
+  end
+
+
+
+
+
+
+
+
+
   
 end
